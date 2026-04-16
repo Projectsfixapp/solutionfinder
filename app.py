@@ -14,65 +14,36 @@ def get_base64(bin_file):
 # --- PRO-DESIGN (APP ICON & BRUTALIST UI) ---
 def set_pro_design():
     bg_style = ""
-    logo_base64 = ""
+    logo_html = ""
+    apple_icon = ""
     try:
         if os.path.exists('background.jpg'):
             bg_base64 = get_base64('background.jpg')
-            # Hintergrund mit dezentem weißen Overlay, damit der Text immer lesbar ist
-            bg_style = f'''
-                background: linear-gradient(rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.4)), 
-                url("data:image/jpg;base64,{bg_base64}");
-                background-size: cover; background-attachment: fixed;
-            '''
+            bg_style = f'background: linear-gradient(rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.4)), url("data:image/jpg;base64,{bg_base64}"); background-size: cover; background-attachment: fixed;'
         
         if os.path.exists('logo.png'):
             logo_base64 = get_base64('logo.png')
+            logo_html = f'<div style="text-align: center; margin-bottom: 10px;"><img src="data:image/png;base64,{logo_base64}" width="220"></div>'
+            apple_icon = f'<link rel="apple-touch-icon" href="data:image/png;base64,{logo_base64}">'
     except:
         pass
 
-    # Apple Touch Icon Meta-Tags & CSS
+    # Komprimiertes CSS ohne Leerzeilen, um Streamlit-Bugs zu vermeiden!
     st.markdown(f'''
-        <head>
-            <link rel="apple-touch-icon" href="data:image/png;base64,{logo_base64}">
-            <meta name="apple-mobile-web-app-capable" content="yes">
-            <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-        </head>
+        {apple_icon}
         <style>
         .stApp {{ {bg_style} }}
-        /* Eingabemaske im Glossy-Look mit hartem Rand */
-        .eingabe-box {{ 
-            background-color: rgba(255, 255, 255, 0.95); 
-            padding: 25px; border-radius: 12px; 
-            border: 3px solid #000000; margin-bottom: 25px;
-            box-shadow: 6px 6px 0px rgba(0,0,0,0.15);
-        }}
-        /* Karten mit starkem Kontrast (Brutalist Design) */
-        .result-card {{ 
-            background-color: #ffffff; padding: 20px; border-radius: 12px; 
-            border: 3px solid #000000; text-align: center; height: 100%;
-            box-shadow: 6px 6px 0px #000000; margin-bottom: 15px;
-        }}
+        .eingabe-box {{ background-color: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 12px; border: 3px solid #000000; margin-bottom: 25px; box-shadow: 6px 6px 0px rgba(0,0,0,0.15); }}
+        .result-card {{ background-color: #ffffff; padding: 20px; border-radius: 12px; border: 3px solid #000000; text-align: center; height: 100%; box-shadow: 6px 6px 0px #000000; margin-bottom: 15px; }}
         .roi-card {{ background-color: #f8f9fa; border: 3px solid #000000; text-align: center; height: 100%; box-shadow: 6px 6px 0px #000000; padding: 15px; border-radius: 12px; }}
         .esg-card {{ background-color: #ffffff; border: 3px solid #000000; text-align: center; height: 100%; box-shadow: 6px 6px 0px #000000; padding: 15px; border-radius: 12px; }}
-        
         .metric-title {{ color: #000000; font-weight: 900; font-size: 1.05em; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }}
         .metric-value {{ font-size: 1.8em; font-weight: 900; color: #000000; }}
-        
-        /* Titel-Styling */
-        .main-title {{ 
-            font-size: 2.5em; font-weight: 900; color: #000000; 
-            text-align: center; margin-top: -15px; margin-bottom: 20px;
-            text-shadow: 2px 2px 0px #ffffff;
-            letter-spacing: -0.5px;
-        }}
-        
-        /* Button Styling */
+        .main-title {{ font-size: 2.5em; font-weight: 900; color: #000000; text-align: center; margin-top: -15px; margin-bottom: 20px; text-shadow: 2px 2px 0px #ffffff; letter-spacing: -0.5px; }}
         .stButton>button {{ border: 3px solid black !important; color: black !important; font-weight: 900; width: 100%; box-shadow: 4px 4px 0px black; transition: all 0.2s; }}
         .stButton>button:active {{ box-shadow: 0px 0px 0px black; transform: translate(4px, 4px); }}
         </style>
-        <div style="text-align: center; margin-bottom: 10px;">
-            <img src="data:image/png;base64,{logo_base64}" width="220">
-        </div>
+        {logo_html}
         <h1 class="main-title">SOLUTIONFINDER</h1>
     ''', unsafe_allow_html=True)
 
@@ -86,7 +57,6 @@ def create_pdf(v, a, komp, t_p, s_list, tp_m, t_tp, t_gn, t_rp, n_tp, n_gn, n_dk
     pdf.cell(0, 10, txt="Rieber Solutionfinder - Bedarfsanalyse", ln=True, align='C')
     pdf.ln(10)
     
-    # Projekt-Parameter inkl. Menükomponenten
     pdf.set_font("Arial", '', 11)
     pdf.cell(0, 7, txt=f"Verfahren: {v} | Bereich: {a}", ln=True)
     pdf.cell(0, 7, txt=f"Menuekomponenten: {komp} | Teilnehmer Gesamt: {t_p}", ln=True)
@@ -124,7 +94,6 @@ n_loc = st.number_input("Anzahl Standorte", min_value=1, value=1)
 total_p = 0
 loc_reports = []
 
-# Dynamische Standort-Abfrage
 for i in range(int(n_loc)):
     c1, c2 = st.columns(2)
     with c1: name = st.text_input(f"Name Standort {i+1}", value=f"Standort {i+1}")
@@ -134,7 +103,6 @@ for i in range(int(n_loc)):
 
 st.markdown("<hr style='border: 2px solid black;'>", unsafe_allow_html=True)
 
-# Parameter-Abfrage 
 k1, k2, k3 = st.columns(3)
 with k1:
     v_sys = st.selectbox("Verfahren", ["Cook & Chill", "Cook & Hold"])
@@ -164,7 +132,6 @@ for _, c in loc_reports:
     t_gn += gn_f
     t_rp += math.ceil(tp_f / 2)
 
-# Preisberechnung (Rabatt & Aufschlag kombiniert)
 rab = 0.3 if gruppe == "Fachhandel" else (0.4 if gruppe == "Großkunde" else 0.0)
 
 def calc_final_netto(lp, r_base, adjustment):
@@ -177,7 +144,6 @@ n_rp = calc_final_netto(310.0, rab, p_adj)
 
 inv = (t_tp * n_tp) + (t_gn * (n_gn + n_dk)) + (t_rp * n_rp)
 
-# ROI & ESG Berechnung
 roi_j = einweg * total_p * tage * 52
 amo = (inv / (einweg * total_p)) / (tage * 4.33) if total_p > 0 and einweg > 0 else 0
 pla = total_p * 0.03 * tage * 52
