@@ -11,20 +11,18 @@ def get_base64(bin_file):
         data = f.read()
     return base64.b64encode(data).decode()
 
-# --- PRO-DESIGN (APP ICON & BRUTALIST UI) ---
+# --- PRO-DESIGN (NUR APP ICON & BRUTALIST UI) ---
 def set_pro_design():
     bg_style = ""
-    logo_html = ""
     apple_icon = ""
     try:
         if os.path.exists('background.jpg'):
             bg_base64 = get_base64('background.jpg')
             bg_style = f'background: linear-gradient(rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.4)), url("data:image/jpg;base64,{bg_base64}"); background-size: cover; background-attachment: fixed;'
         
-        # HIER WURDE DER NAME UND DAS FORMAT ANGEPASST:
+        # Das Bild wird NUR noch als App-Icon für iOS im Hintergrund geladen
         if os.path.exists('Solutionfinder.jpeg'):
             logo_base64 = get_base64('Solutionfinder.jpeg')
-            logo_html = f'<div style="text-align: center; margin-bottom: 20px;"><img src="data:image/jpeg;base64,{logo_base64}" width="220"></div>'
             apple_icon = f'<link rel="apple-touch-icon" href="data:image/jpeg;base64,{logo_base64}">'
     except:
         pass
@@ -39,21 +37,17 @@ def set_pro_design():
         .esg-card {{ background-color: #ffffff; border: 3px solid #000000; text-align: center; height: 100%; box-shadow: 6px 6px 0px #000000; padding: 15px; border-radius: 12px; }}
         .metric-title {{ color: #000000; font-weight: 900; font-size: 1.05em; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }}
         .metric-value {{ font-size: 1.8em; font-weight: 900; color: #000000; }}
-        .main-title {{ font-size: 2.5em; font-weight: 900; color: #000000; text-align: center; margin-top: -15px; margin-bottom: 5px; text-shadow: 2px 2px 0px #ffffff; letter-spacing: -0.5px; }}
+        .main-title {{ font-size: 2.8em; font-weight: 900; color: #000000; text-align: center; margin-top: 10px; margin-bottom: 30px; text-shadow: 2px 2px 0px #ffffff; letter-spacing: -0.5px; }}
         .stButton>button {{ border: 3px solid black !important; color: black !important; font-weight: 900; width: 100%; box-shadow: 4px 4px 0px black; transition: all 0.2s; }}
         .stButton>button:active {{ box-shadow: 0px 0px 0px black; transform: translate(4px, 4px); }}
         </style>
         <h1 class="main-title">SOLUTIONFINDER</h1>
-        {logo_html}
     ''', unsafe_allow_html=True)
 
-# --- PDF GENERATOR ---
+# --- PDF GENERATOR (LOGO ENTFERNT) ---
 def create_pdf(v, a, komp, t_p, s_list, tp_m, t_tp, t_gn, t_rp, n_tp, n_gn, n_dk, n_rp, inv, e_j, a_m, p_j, c_j):
     pdf = FPDF()
     pdf.add_page()
-    # HIER EBENFALLS ANGEPASST:
-    if os.path.exists('Solutionfinder.jpeg'): pdf.image('Solutionfinder.jpeg', 10, 8, 45)
-    pdf.ln(20)
     pdf.set_font("Arial", 'B', 16)
     pdf.cell(0, 10, txt="Rieber Solutionfinder - Bedarfsanalyse", ln=True, align='C')
     pdf.ln(10)
@@ -86,7 +80,7 @@ def create_pdf(v, a, komp, t_p, s_list, tp_m, t_tp, t_gn, t_rp, n_tp, n_gn, n_dk
     return pdf.output(dest='S').encode('latin-1')
 
 # --- APP START ---
-st.set_page_config(page_title="Rieber Solutionfinder", layout="wide", page_icon="Solutionfinder.jpeg" if os.path.exists("Solutionfinder.jpeg") else None)
+st.set_page_config(page_title="Rieber Solutionfinder", layout="wide")
 set_pro_design()
 
 # --- EINGABE ---
