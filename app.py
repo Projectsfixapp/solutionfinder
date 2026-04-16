@@ -1,117 +1,148 @@
 import streamlit as st
 import pandas as pd
 import math
+import base64
+from fpdf import FPDF
 
-# ==========================================
-# 1. UI/UX SETUP (Rieber Design)
-# ==========================================
-st.set_page_config(page_title="Rieber Lösungs-Konfigurator", layout="wide", initial_sidebar_state="collapsed")
+# --- FUNKTIONEN FÜR DESIGN ---
+def get_base64(bin_file):
+    with open(bin_file, 'rb') as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
 
-st.markdown("""
-    <style>
-    /* Hintergrundbild (Muss background.jpg heißen) */
-    .stApp {
-        background-image: url('background.jpg'); 
-        background-size: cover;
-        background-repeat: no-repeat;
-        background-attachment: fixed;
-    }
-    /* Eingabebereich Styling */
-    .eingabe-box {
-        background-color: rgba(240, 248, 248, 0.95);
-        padding: 20px;
-        border-radius: 8px;
-        border-top: 4px solid #004e54;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        margin-bottom: 20px;
-    }
-    .stButton>button { background-color: #004e54 !important; color: white !important; font-weight: bold; }
-    .result-card { 
-        background-color: white; padding: 15px; border-radius: 10px; 
-        border: 1px solid #004e54; text-align: center; height: 100%;
-    }
-    .metric-title { color: #004e54; font-weight: bold; font-size: 1.1em; }
-    .metric-value { font-size: 1.8em; font-weight: bold; color: #333; margin: 0; }
-    .price-value { font-size: 1.5em; color: #d9534f; font-weight: bold; } 
-    </style>
-    """, unsafe_allow_html=True)
+def set_design():
+    try:
+        bg_base64 = get_base64('background.jpg')
+        logo_base64 = get_base64('logo.png')
+        design_html = f'''
+        <style>
+        .stApp {{
+            background-image: url("data:image/jpg;base64,{bg_base64}");
+            background-size: cover; background-repeat: no-repeat; background-attachment: fixed;
+        }}
+        .logo-container {{ text-align: center; margin-bottom: 20px; background: rgba(255,255,255,0.8); padding: 10px; border-radius: 10px; }}
+        .eingabe-box {{ background-color: rgba(240, 248, 248, 0.95); padding: 20px; border-radius: 8px; border-top: 4px solid #004e54; margin-bottom: 20px; }}
+        .result-card {{ background-color: white; padding: 15px; border-radius: 10px; border: 1px solid #004e54; text-align: center; margin-bottom: 10px; }}
+        </style>
+        <div class="logo-container">
+            <img src="data:image/png;base64,{logo_base64}" width="200">
+        </div>
+        '''
+        st.markdown(design_html, unsafe_allow_html=True)
+    except:
+        st.title("Rieber Solutionfinder")
 
-st.markdown("<h1 style='color: #004e54; margin-bottom: 0;'>Lösungs-Konfigurator</h1>", unsafe_allow_html=True)
-st.markdown("<h3 style='color: #555; margin-top: 0;'>Planungstool für Speisenverteilung</h3>", unsafe_allow_html=True)
+# --- PDF GENERIERUNG ---
+def create_pdf(data_list, gesamt_invest):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(200, 10, txt="Rieber Stückliste & Bedarfsanalyse", ln=True, align='C')
+    pdf.set_font("Arial", size=12)
+    pdf.ln(10)
+    for item in data_list:
+        pdf.cell(200, 10, txt=item, ln=True)
+    pdf.ln(10)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(200, 10, txt=f"Gesamtinvestition Netto: {gesamt_invest:,.2f} EUR", ln=True)
+    return pdf.output(dest='S').encode('latin-1')
 
-# ==========================================
-# 2. EINGABEMASKE
-# ==========================================
-with st.container():
-    st.markdown("<div class='eingabe-box'>", unsafe_allow_html=True)
-    
-    st.subheader("1. Systemparameter")
-    c1, c2, c3, c4, c5, c6 = st.columns(6)
-    with c1: anwendung = st.selectbox("Anwendungsbereich", ["Kita", "Schule", "Altenheim", "Betrieb"])
-    with c2: verfahren = st.selectbox("Verfahren", ["Cook & Chill", "Cook & Hold"])
-    with c3: komponenten = st.selectbox("Komponenten", ["3-Komp.", "4-Komp."])
-    with c4: tage = st.number_input("Tage/Woche", min_value=1, max_value=7, value=5)
-    with c5: personen_ist = st.number_input("Personen", min_value=1, value=150)
-    with c6: puffer = st.number_input("Umlauf-Faktor (%)", min_value=0, value=20) / 100
-    
-    st.markdown("---")
-    
-    st.subheader("2. Kaufmännische Parameter")
-    k1, k2, k3 = st.columns(3)
-    with k1: kundengruppe = st.selectbox("Kundengruppe", ["Endkunde", "Fachhandel", "Großkunde"])
-    with k2: preis_anpassung = st.number_input("Projekt-Zu/Abschlag (%)", value=0.0, step=0.1)
-    with k3: einweg_kosten = st.number_input("Einweg-Kosten (€/Portion)", value=0.30, step=0.05)
-            
-    st.markdown("</div>", unsafe_allow_html=True)
+# --- APP SETUP ---
+st.set_page_config(page_title="Rieber META cooking Solutionfinder", layout="wide")
+set_design()
 
-# ==========================================
-# 3. LOGIK & BERECHNUNG (1-zu-1 aus ODS)
-# ==========================================
-def get_kalk_personen(p):
-    for s in [10, 12, 25, 50, 75, 100, 150, 200, 250, 300, 400, 500]:
-        if p <= s: return s
-    return p
+# --- STANDORT-EINGABE ---
+st.markdown('<div class="eingabe-box">', unsafe_allow_html=True)
+st.subheader("1. Standort-Bedarfsplanung")
+num_locations = st.number_input("Anzahl der Standorte", min_value=1, value=1)
 
-calc_p = get_kalk_personen(personen_ist)
-# Grammaturen je nach Zielgruppe
+locations = []
+total_persons = 0
+for i in range(int(num_locations)):
+    col1, col2 = st.columns(2)
+    with col1:
+        name = st.text_input(f"Name Standort {i+1}", value=f"Standort {i+1}")
+    with col2:
+        count = st.number_input(f"Essensteilnehmer {name}", min_value=1, value=50)
+    locations.append({"name": name, "count": count})
+    total_persons += count
+st.markdown('</div>', unsafe_allow_html=True)
+
+# --- SYSTEM-PARAMETER ---
+st.markdown('<div class="eingabe-box">', unsafe_allow_html=True)
+st.subheader("2. System & Konditionen")
+c1, c2, c3 = st.columns(3)
+with c1:
+    verfahren = st.selectbox("Verfahren", ["Cook & Chill", "Cook & Hold"])
+    tage = st.number_input("Tage/Woche", value=5)
+with c2:
+    anwendung = st.selectbox("Bereich", ["Kita", "Schule", "Altenheim", "Betrieb"])
+    puffer = st.number_input("Umlauf-Puffer (%)", value=20) / 100
+with c3:
+    kundengruppe = st.selectbox("Kundengruppe", ["Endkunde", "Fachhandel", "Großkunde"])
+    rabatt_extra = st.number_input("Projekt Zu/Abschlag (%)", value=0.0)
+st.markdown('</div>', unsafe_allow_html=True)
+
+# --- BERECHNUNG ---
 gramm_map = {"Kita": 280, "Schule": 360, "Altenheim": 435, "Betrieb": 430}
-vol_l = (gramm_map[anwendung] * calc_p) / 1000
-anz_gn = math.ceil(vol_l / 5) # 5L Kapazität pro GN 1/1 65mm
-anz_gn_final = math.ceil(anz_gn * (1 + puffer))
-# DEINE KORREKTUR: 5x GN 1/1 65mm pro thermoport 4.0
-anz_tp = math.ceil(anz_gn_final / 5)
+pro_portion = gramm_map[anwendung]
 
-# Kaufmännische Berechnung
-p_gn, p_dk, p_tp = 35.00, 15.00, 850.00 # Brutto-Listenpreise
-rabatt = 0.3 if kundengruppe == "Fachhandel" else (0.4 if kundengruppe == "Großkunde" else 0.0)
+# Thermoport Modell wählen
+tp_modell = "thermoport® 1000K" if verfahren == "Cook & Chill" else "thermoport® 1000KB 4.0 (beheizt)"
+tp_preis_basis = 850.0 if verfahren == "Cook & Chill" else 1250.0
 
-def netto(lp):
-    return round(lp * (1 - rabatt) * (1 + (preis_anpassung / 100)), 2)
+# Mengen pro Standort berechnen
+results = []
+total_tp = 0
+total_gn = 0
+total_rp = 0
 
-n_gn, n_dk, n_tp = netto(p_gn), netto(p_dk), netto(p_tp)
-invest = (anz_gn_final * (n_gn + n_dk)) + (anz_tp * n_tp)
+for loc in locations:
+    # Kapazitäts-Check
+    vol_l = (pro_portion * loc["count"]) / 1000
+    gn_loc = math.ceil(vol_l / 5)
+    gn_puffer = math.ceil(gn_loc * (1 + puffer))
+    tp_loc = math.ceil(gn_puffer / 5)
+    rp_loc = math.ceil(tp_loc / 2) # 2 Thermoporte pro Rolliport
+    
+    total_tp += tp_loc
+    total_gn += gn_puffer
+    total_rp += rp_loc
+    results.append(f"{loc['name']}: {loc['count']} Essen -> {tp_loc}x {tp_modell}, {rp_loc}x Rolliport")
 
-# ROI & Nachhaltigkeit
-einweg_jahr = einweg_kosten * personen_ist * tage * 52
-amort_monat = (invest / (einweg_kosten * personen_ist)) / (tage * 4.33) if einweg_kosten > 0 else 0
-plastik_jahr = personen_ist * 0.03 * tage * 52
-co2_jahr = plastik_jahr * 3.5
+# Preise berechnen
+rabatt_hdl = 0.3 if kundengruppe == "Fachhandel" else (0.4 if kundengruppe == "Großkunde" else 0.0)
+def calc_netto(lp): return round(lp * (1 - rabatt_hdl) * (1 + (rabatt_extra/100)), 2)
 
-# ==========================================
-# 4. AUSGABE
-# ==========================================
-st.header("Konfiguration & Investition")
-r1, r2, r3 = st.columns(3)
-with r1: st.markdown(f'<div class="result-card"><p class="metric-title">thermoport®</p><p class="metric-value">{anz_tp} Stk.</p><p>à {n_tp:.2f} €</p></div>', unsafe_allow_html=True)
-with r2: st.markdown(f'<div class="result-card"><p class="metric-title">GN-Behälter Sets</p><p class="metric-value">{anz_gn_final} Stk.</p><p>à {n_gn+n_dk:.2f} €</p></div>', unsafe_allow_html=True)
-with r3: st.markdown(f'<div class="result-card"><p class="metric-title">Investition (Netto)</p><p class="price-value">{invest:,.2f} €</p></div>', unsafe_allow_html=True)
+n_tp = calc_netto(tp_preis_basis)
+n_gn = calc_netto(35.0) # Behälter
+n_dk = calc_netto(15.0) # Deckel
+n_rp = calc_netto(280.0) # Rolliport
 
-st.markdown("---")
-st.header("Business Case & Nachhaltigkeit")
-c_roi, c_esg = st.columns(2)
-with c_roi:
-    st.subheader("Finanzielle Amortisation")
-    st.info(f"Die Lösung amortisiert sich nach ca. **{amort_monat:.1f} Monaten**.")
-with c_esg:
-    st.subheader("Umwelt-Impact")
-    st.success(f"Einsparung: **{plastik_jahr:,.0f} kg Plastik** und **{co2_jahr:,.0f} kg CO2** pro Jahr.")
+invest = (total_tp * n_tp) + (total_gn * n_gn) + (total_gn * n_dk) + (total_rp * n_rp)
+
+# --- AUSGABE ---
+st.header("Empfohlene Ausstattung (Gesamt)")
+res1, res2, res3, res4 = st.columns(4)
+with res1: st.markdown(f'<div class="result-card"><b>{tp_modell}</b><br><h3>{total_tp} Stk.</h3>à {n_tp:.2f}€</div>', unsafe_allow_html=True)
+with res2: st.markdown(f'<div class="result-card"><b>GN-Behälter 1/1 65</b><br><h3>{total_gn} Stk.</h3>à {n_gn:.2f}€</div>', unsafe_allow_html=True)
+with res3: st.markdown(f'<div class="result-card"><b>Steckdeckel (Dichtung)</b><br><h3>{total_gn} Stk.</h3>à {n_dk:.2f}€</div>', unsafe_allow_html=True)
+with res4: st.markdown(f'<div class="result-card"><b>Rolliport</b><br><h3>{total_rp} Stk.</h3>à {n_rp:.2f}€</div>', unsafe_allow_html=True)
+
+st.subheader("Investition Gesamt: " + f"{invest:,.2f} € (Netto)")
+
+# PDF Download
+pdf_list = [
+    f"Verfahren: {verfahren}",
+    f"Anwendung: {anwendung}",
+    "--- Standorte ---"
+] + results + [
+    "--- Stückliste Gesamt ---",
+    f"{total_tp}x {tp_modell}",
+    f"{total_gn}x GN-Behälter 1/1 65mm",
+    f"{total_gn}x GN-Steckdeckel mit Dichtung",
+    f"{total_rp}x Rolliport"
+]
+
+pdf_data = create_pdf(pdf_list, invest)
+st.download_button("Stückliste als PDF herunterladen", data=pdf_data, file_name="Rieber_Angebot.pdf", mime="application/pdf")
