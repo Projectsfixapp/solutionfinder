@@ -116,7 +116,7 @@ def set_design():
     st.markdown(f'<style>{CSS}</style>' + header, unsafe_allow_html=True)
 
 
-def create_pdf(v, a, komp, t_p, s_list, tp_m, t_tp, t_gn, t_rp,
+def create_pdf(v, a, komp, t_p, tage, s_list, tp_m, t_tp, t_gn, t_rp,
                n_tp, n_gn, n_dk, n_rp, inv, e_j, a_m, p_j, c_j, kunde=""):
     pdf = FPDF()
     pdf.add_page()
@@ -145,17 +145,31 @@ def create_pdf(v, a, komp, t_p, s_list, tp_m, t_tp, t_gn, t_rp,
     pdf.set_font("Arial", 'B', 13)
     pdf.set_text_color(30, 30, 30)
     pdf.cell(0, 8, txt="SOLUTIONFINDER - Bedarfsanalyse", ln=True)
+    pdf.ln(3)
+
     if kunde:
-        pdf.set_font("Arial", '', 11)
-        pdf.set_text_color(80, 80, 80)
+        pdf.set_font("Arial", 'B', 11)
+        pdf.set_text_color(30, 30, 30)
         pdf.cell(0, 7, txt=f"Kunde: {kunde}", ln=True)
-    pdf.ln(5)
 
     pdf.set_font("Arial", '', 11)
     pdf.set_text_color(80, 80, 80)
     pdf.cell(0, 7, txt=f"Verfahren: {v}  |  Bereich: {a}", ln=True)
-    pdf.cell(0, 7, txt=f"Menuekomponenten: {komp}  |  Teilnehmer gesamt: {t_p}", ln=True)
-    pdf.ln(5)
+    pdf.cell(0, 7, txt=f"Menuekomponenten: {komp}  |  Tage/Woche: {tage}", ln=True)
+    pdf.ln(4)
+
+    # Standorte
+    pdf.set_font("Arial", 'B', 11)
+    pdf.set_text_color(30, 30, 30)
+    pdf.cell(0, 7, txt=f"Standorte ({len(s_list)}):", ln=True)
+    pdf.set_font("Arial", '', 11)
+    pdf.set_text_color(60, 60, 60)
+    for loc_name, loc_count in s_list:
+        pdf.cell(0, 6, txt=f"  - {loc_name}: {loc_count} Teilnehmer", ln=True)
+    pdf.set_font("Arial", 'B', 11)
+    pdf.set_text_color(30, 30, 30)
+    pdf.cell(0, 7, txt=f"  Gesamt: {t_p} Teilnehmer", ln=True)
+    pdf.ln(4)
 
     pdf.set_font("Arial", 'B', 11)
     pdf.set_text_color(30, 30, 30)
@@ -338,7 +352,7 @@ o4.markdown(
     unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
-pdf_b = create_pdf(v_sys, bereich, komp, total_p, loc_reports, tp_m, t_tp, t_gn, t_rp,
+pdf_b = create_pdf(v_sys, bereich, komp, total_p, tage, loc_reports, tp_m, t_tp, t_gn, t_rp,
                    n_tp, n_gn, n_dk, n_rp, inv, roi_j, amo, pla, co2, kunde)
 st.download_button("Bedarfsanalyse als PDF speichern", data=pdf_b,
                    file_name="Rieber_Bedarfsanalyse.pdf", mime="application/pdf")
