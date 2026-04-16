@@ -1,3 +1,5 @@
+# TEST-CODE: Zeigt alle Dateien auf dem Server an
+st.write("Dateien auf dem Server:", os.listdir())
 import streamlit as st
 import pandas as pd
 import math
