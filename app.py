@@ -1,5 +1,3 @@
-# TEST-CODE: Zeigt alle Dateien auf dem Server an
-st.write("Dateien auf dem Server:", os.listdir())
 import streamlit as st
 import pandas as pd
 import math
@@ -7,23 +5,30 @@ import base64
 import os
 from fpdf import FPDF
 
-# --- DESIGN FUNKTIONEN ---
+# --- BASIS-FUNKTIONEN ---
 def get_base64(bin_file):
     with open(bin_file, 'rb') as f:
         data = f.read()
     return base64.b64encode(data).decode()
 
 def set_design():
+    # Versuche Bilder zu laden, sonst Standard-Hintergrund
+    bg_style = ""
+    logo_html = ""
     try:
-        bg_base64 = get_base64('background.jpg')
-        logo_base64 = get_base64('logo.png')
-        design_html = f'''
+        if os.path.exists('background.jpg'):
+            bg_base64 = get_base64('background.jpg')
+            bg_style = f'background-image: url("data:image/jpg;base64,{bg_base64}"); background-size: cover; background-attachment: fixed;'
+        
+        if os.path.exists('logo.png'):
+            logo_base64 = get_base64('logo.png')
+            logo_html = f'<div style="text-align: center; margin-bottom: 10px;"><img src="data:image/png;base64,{logo_base64}" width="250"></div>'
+    except:
+        pass
+
+    st.markdown(f'''
         <style>
-        .stApp {{
-            background-image: url("data:image/jpg;base64,{bg_base64}");
-            background-size: cover; background-repeat: no-repeat; background-attachment: fixed;
-        }}
-        .logo-container {{ text-align: center; margin-bottom: 10px; padding: 10px; }}
+        .stApp {{ {bg_style} }}
         .eingabe-box {{ 
             background-color: rgba(240, 248, 248, 0.95); 
             padding: 20px; border-radius: 8px; 
@@ -32,193 +37,116 @@ def set_design():
         .result-card {{ 
             background-color: white; padding: 15px; border-radius: 10px; 
             border: 1px solid #004e54; text-align: center; height: 100%;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 10px;
         }}
-        .roi-card {{ 
-            background-color: #e8f4f4; padding: 15px; border-radius: 10px; 
-            border-left: 5px solid #004e54; text-align: center; height: 100%;
-        }}
-        .esg-card {{ 
-            background-color: #f0f9f0; padding: 15px; border-radius: 10px; 
-            border-left: 5px solid #5cb85c; text-align: center; height: 100%;
-        }}
+        .roi-card {{ background-color: #e8f4f4; padding: 15px; border-radius: 10px; border-left: 5px solid #004e54; text-align: center; height: 100%; }}
+        .esg-card {{ background-color: #f0f9f0; padding: 15px; border-radius: 10px; border-left: 5px solid #5cb85c; text-align: center; height: 100%; }}
         .metric-title {{ color: #004e54; font-weight: bold; margin-bottom: 5px; }}
-        .metric-value {{ font-size: 1.5em; font-weight: bold; color: #333; }}
+        .metric-value {{ font-size: 1.4em; font-weight: bold; color: #333; }}
         </style>
-        <div class="logo-container">
-            <img src="data:image/png;base64,{logo_base64}" width="250">
-        </div>
-        '''
-        st.markdown(design_html, unsafe_allow_html=True)
-    except:
-        st.title("Rieber Solutionfinder")
+        {logo_html}
+    ''', unsafe_allow_html=True)
 
 # --- PDF GENERATOR ---
-def create_pdf(verfahren, anwendung, total_p_day, standort_bericht, 
-               tp_modell, total_tp, total_gn, total_rp, n_tp, n_gn, n_dk, n_rp, 
-               invest, einweg_jahr, amort_monat, plastik_jahr, co2_jahr):
-    
+def create_pdf(v, a, t_p, s_list, tp_m, t_tp, t_gn, t_rp, n_tp, n_gn, n_dk, n_rp, inv, e_j, a_m, p_j, c_j):
     pdf = FPDF()
     pdf.add_page()
-    
-    # 1. Logo einbinden (falls vorhanden)
-    if os.path.exists('logo.png'):
-        pdf.image('logo.png', 10, 8, 60)
-    
+    if os.path.exists('logo.png'): pdf.image('logo.png', 10, 8, 50)
     pdf.ln(20)
     pdf.set_font("Arial", 'B', 16)
-    pdf.cell(0, 10, txt="Rieber META cooking - Bedarfsanalyse & ROI", ln=True, align='C')
+    pdf.cell(0, 10, txt="Rieber Solutionfinder - Bedarfsanalyse", ln=True, align='C')
     pdf.ln(10)
-    
-    # 2. Projekt-Parameter
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(0, 8, txt="1. Projekt-Parameter", ln=True)
     pdf.set_font("Arial", '', 11)
-    pdf.cell(0, 6, txt=f"Verfahren: {verfahren}", ln=True)
-    pdf.cell(0, 6, txt=f"Anwendungsbereich: {anwendung}", ln=True)
-    pdf.cell(0, 6, txt=f"Essensteilnehmer Gesamt: {total_p_day} Personen pro Tag", ln=True)
+    pdf.cell(0, 7, txt=f"Verfahren: {v} | Bereich: {a} | Teilnehmer: {t_p}", ln=True)
     pdf.ln(5)
-    
-    # 3. Standort-Aufteilung
     pdf.set_font("Arial", 'B', 12)
-    pdf.cell(0, 8, txt="2. Standort-Aufteilung", ln=True)
+    pdf.cell(0, 8, txt="Stueckliste:", ln=True)
     pdf.set_font("Arial", '', 11)
-    for loc_text in standort_bericht:
-        pdf.cell(0, 6, txt=f"- {loc_text}", ln=True)
+    pdf.cell(0, 6, txt=f"- {t_tp}x {tp_m} (a {n_tp:,.2f} EUR)", ln=True)
+    pdf.cell(0, 6, txt=f"- {t_gn}x GN-Behaelter 1/1 65mm (a {n_gn:,.2f} EUR)", ln=True)
+    pdf.cell(0, 6, txt=f"- {t_gn}x GN-Steckdeckel (a {n_dk:,.2f} EUR)", ln=True)
+    pdf.cell(0, 6, txt=f"- {t_rp}x Rolliport (a {n_rp:,.2f} EUR)", ln=True)
     pdf.ln(5)
-    
-    # 4. Stückliste (ordentlich formatiert)
     pdf.set_font("Arial", 'B', 12)
-    pdf.cell(0, 8, txt="3. Empfohlene Ausstattung (Stueckliste)", ln=True)
-    pdf.set_font("Arial", '', 11)
-    
-    # Formatierte Liste mit Abständen
-    pdf.cell(30, 6, txt=f"{total_tp} Stk.", border=0)
-    pdf.cell(90, 6, txt=f"{tp_modell}", border=0)
-    pdf.cell(0, 6, txt=f"à {n_tp:,.2f} EUR", border=0, ln=True)
-    
-    pdf.cell(30, 6, txt=f"{total_gn} Stk.", border=0)
-    pdf.cell(90, 6, txt="GN-Behaelter 1/1 65mm", border=0)
-    pdf.cell(0, 6, txt=f"à {n_gn:,.2f} EUR", border=0, ln=True)
-    
-    pdf.cell(30, 6, txt=f"{total_gn} Stk.", border=0)
-    pdf.cell(90, 6, txt="GN-Steckdeckel (Dichtung)", border=0)
-    pdf.cell(0, 6, txt=f"à {n_dk:,.2f} EUR", border=0, ln=True)
-    
-    pdf.cell(30, 6, txt=f"{total_rp} Stk.", border=0)
-    pdf.cell(90, 6, txt="Rolliport", border=0)
-    pdf.cell(0, 6, txt=f"à {n_rp:,.2f} EUR", border=0, ln=True)
-    
-    pdf.ln(3)
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(0, 10, txt=f"Gesamtinvestition Netto: {invest:,.2f} EUR", ln=True)
+    pdf.cell(0, 8, txt=f"Gesamtinvestition: {inv:,.2f} EUR Netto", ln=True)
     pdf.ln(5)
-    
-    # 5. Business Case (ROI & ESG)
     pdf.set_font("Arial", 'B', 12)
-    pdf.cell(0, 8, txt="4. Business Case & Nachhaltigkeit (pro Jahr)", ln=True)
+    pdf.cell(0, 8, txt="Business Case:", ln=True)
     pdf.set_font("Arial", '', 11)
-    pdf.cell(0, 6, txt=f"- Kosten fuer bisheriges Einweg-System: {einweg_jahr:,.2f} EUR", ln=True)
-    pdf.cell(0, 6, txt=f"- Amortisation der Rieber-Loesung nach: ca. {amort_monat:.1f} Monaten", ln=True)
-    pdf.cell(0, 6, txt=f"- Eingesparter Plastikmuell: {plastik_jahr:,.0f} kg", ln=True)
-    pdf.cell(0, 6, txt=f"- CO2-Reduktion: {co2_jahr:,.0f} kg", ln=True)
-    
+    pdf.cell(0, 6, txt=f"Amortisation: {a_m:.1f} Monate", ln=True)
+    pdf.cell(0, 6, txt=f"Einsparung Plastik: {p_j:,.0f} kg / Jahr", ln=True)
     return pdf.output(dest='S').encode('latin-1')
 
 # --- APP START ---
 st.set_page_config(page_title="Rieber Solutionfinder", layout="wide")
 set_design()
 
-# --- 1. STANDORT-PLANUNG ---
+# --- EINGABE ---
 st.markdown('<div class="eingabe-box">', unsafe_allow_html=True)
-st.subheader("1. Standort-Bedarf")
-num_locs = st.number_input("Anzahl der Standorte", min_value=1, value=1)
-loc_data = []
-total_p_day = 0
-
-for i in range(int(num_locs)):
+n_loc = st.number_input("Anzahl Standorte", min_value=1, value=1)
+total_p = 0
+loc_reports = []
+for i in range(int(n_loc)):
     c1, c2 = st.columns(2)
-    with c1: name = st.text_input(f"Name Standort {i+1}", value=f"Standort {i+1}")
-    with c2: count = st.number_input(f"Teilnehmer {name}", min_value=1, value=50)
-    loc_data.append({"name": name, "count": count})
-    total_p_day += count
-st.markdown('</div>', unsafe_allow_html=True)
+    with c1: name = st.text_input(f"Name {i+1}", value=f"Standort {i+1}")
+    with c2: count = st.number_input(f"Teilnehmer {i+1}", min_value=1, value=50)
+    total_p += count
+    loc_reports.append((name, count))
 
-# --- 2. SYSTEM-PARAMETER ---
-st.markdown('<div class="eingabe-box">', unsafe_allow_html=True)
-st.subheader("2. System & Kalkulation")
+st.markdown("---")
 k1, k2, k3 = st.columns(3)
 with k1:
-    verfahren = st.selectbox("Verfahren", ["Cook & Chill", "Cook & Hold"])
+    v_sys = st.selectbox("Verfahren", ["Cook & Chill", "Cook & Hold"])
     tage = st.number_input("Tage/Woche", value=5)
 with k2:
-    anwendung = st.selectbox("Bereich", ["Kita", "Schule", "Altenheim", "Betrieb"])
-    puffer = st.number_input("Umlauf-Puffer (%)", value=20) / 100
+    bereich = st.selectbox("Bereich", ["Kita", "Schule", "Altenheim", "Betrieb"])
+    puf = st.number_input("Puffer (%)", value=20) / 100
 with k3:
-    kundengruppe = st.selectbox("Kundengruppe", ["Endkunde", "Fachhandel", "Großkunde"])
-    p_adj = st.number_input("Projekt Zu/Abschlag (%)", value=0.0)
-    einweg_kosten = st.number_input("Einweg-Kosten (€/Portion)", value=0.35)
+    gruppe = st.selectbox("Kunde", ["Endkunde", "Fachhandel", "Großkunde"])
+    einweg = st.number_input("Einweg €/Portion", value=0.35)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- BERECHNUNGSLOGIK ---
-# Equipment-Typen
-tp_modell = "thermoport® 1000K" if verfahren == "Cook & Chill" else "thermoport® 1000KB 4.0"
-tp_preis_lp = 890.0 if verfahren == "Cook & Chill" else 1350.0
+# --- LOGIK ---
+tp_m = "thermoport 1000K" if v_sys == "Cook & Chill" else "thermoport 1000KB 4.0"
+tp_lp = 895.0 if v_sys == "Cook & Chill" else 1340.0
+g_map = {"Kita": 280, "Schule": 360, "Altenheim": 435, "Betrieb": 430}
+g_p = g_map[bereich]
 
-# Kalkulations-Grammatur
-gramm_map = {"Kita": 280, "Schule": 360, "Altenheim": 435, "Betrieb": 430}
-g_pro_p = gramm_map[anwendung]
+t_tp, t_gn, t_rp = 0, 0, 0
+for _, c in loc_reports:
+    gn_loc = math.ceil(((g_p * c)/1000) / 5)
+    gn_f = math.ceil(gn_loc * (1+puf))
+    tp_f = math.ceil(gn_f / 5)
+    t_tp += tp_f
+    t_gn += gn_f
+    t_rp += math.ceil(tp_f / 2)
 
-# Summen bilden
-total_tp, total_gn, total_rp = 0, 0, 0
-standort_bericht = []
+rab = 0.3 if gruppe == "Fachhandel" else (0.4 if gruppe == "Großkunde" else 0.0)
+n_tp, n_gn, n_dk, n_rp = tp_lp*(1-rab), 38.0*(1-rab), 18.0*(1-rab), 290.0*(1-rab)
+inv = (t_tp*n_tp) + (t_gn*(n_gn+n_dk)) + (t_rp*n_rp)
 
-for loc in loc_data:
-    vol_l = (g_pro_p * loc["count"]) / 1000
-    gn_bedarf = math.ceil(vol_l / 5)
-    gn_final = math.ceil(gn_bedarf * (1 + puffer))
-    tp_bedarf = math.ceil(gn_final / 5)
-    rp_bedarf = math.ceil(tp_bedarf / 2) # 2 TP pro Rolli
-    
-    total_tp += tp_bedarf
-    total_gn += gn_final
-    total_rp += rp_bedarf
-    standort_bericht.append(f"{loc['name']}: {loc['count']} Pers. -> {tp_bedarf}x TP, {rp_bedarf}x Rolli")
+roi_j = einweg * total_p * tage * 52
+amo = (inv / (einweg * total_p)) / (tage * 4.33) if total_p > 0 else 0
+pla = total_p * 0.03 * tage * 52
+co2 = pla * 3.5
 
-# Preis-Berechnung
-rabatt_base = 0.3 if kundengruppe == "Fachhandel" else (0.4 if kundengruppe == "Großkunde" else 0.0)
-def get_netto(lp): return round(lp * (1 - rabatt_base) * (1 + (p_adj/100)), 2)
+# --- OUTPUT ---
+st.header("Bedarf & Investition")
+r1, r2, r3, r4 = st.columns(4)
+r1.markdown(f'<div class="result-card"><p class="metric-title">{tp_m}</p><p class="metric-value">{t_tp} Stk.</p></div>', unsafe_allow_html=True)
+r2.markdown(f'<div class="result-card"><p class="metric-title">GN 1/1 65mm</p><p class="metric-value">{t_gn} Stk.</p></div>', unsafe_allow_html=True)
+r3.markdown(f'<div class="result-card"><p class="metric-title">Steckdeckel</p><p class="metric-value">{t_gn} Stk.</p></div>', unsafe_allow_html=True)
+r4.markdown(f'<div class="result-card"><p class="metric-title">Rolliport</p><p class="metric-value">{t_rp} Stk.</p></div>', unsafe_allow_html=True)
 
-n_tp, n_gn, n_dk, n_rp = get_netto(tp_preis_lp), get_netto(38.0), get_netto(18.0), get_netto(295.0)
-invest = (total_tp * n_tp) + (total_gn * n_gn) + (total_gn * n_dk) + (total_rp * n_rp)
+st.markdown(f'<h2 style="text-align: center; color: #004e54;">Investition: {inv:,.2f} € Netto</h2>', unsafe_allow_html=True)
 
-# ROI & ESG
-einweg_jahr = einweg_kosten * total_p_day * tage * 52
-amort_monat = (invest / (einweg_kosten * total_p_day)) / (tage * 4.33) if einweg_kosten > 0 else 0
-plastik_jahr = total_p_day * 0.03 * tage * 52 # 30g pro Portion
-co2_jahr = plastik_jahr * 3.5
+st.header("ROI & Nachhaltigkeit")
+o1, o2, o3, o4 = st.columns(4)
+o1.markdown(f'<div class="roi-card"><p class="metric-title">Einweg/Jahr</p><p class="metric-value">{roi_j:,.0f}€</p></div>', unsafe_allow_html=True)
+o2.markdown(f'<div class="roi-card"><p class="metric-title">Amortisation</p><p class="metric-value">{amo:.1f} Mon.</p></div>', unsafe_allow_html=True)
+o3.markdown(f'<div class="esg-card"><p class="metric-title">Plastik gespart</p><p class="metric-value">{pla:,.0f}kg</p></div>', unsafe_allow_html=True)
+o4.markdown(f'<div class="esg-card"><p class="metric-title">CO2 gespart</p><p class="metric-value">{co2:,.0f}kg</p></div>', unsafe_allow_html=True)
 
-# --- AUSGABE IN KARTEN ---
-st.header("Hardware-Bedarf & Investition")
-c_res1, c_res2, c_res3, c_res4 = st.columns(4)
-with c_res1: st.markdown(f'<div class="result-card"><p class="metric-title">{tp_modell}</p><p class="metric-value">{total_tp} Stk.</p><p>à {n_tp:.2f}€</p></div>', unsafe_allow_html=True)
-with c_res2: st.markdown(f'<div class="result-card"><p class="metric-title">GN-Behälter 1/1 65</p><p class="metric-value">{total_gn} Stk.</p><p>à {n_gn:.2f}€</p></div>', unsafe_allow_html=True)
-with c_res3: st.markdown(f'<div class="result-card"><p class="metric-title">Steckdeckel (Dichtung)</p><p class="metric-value">{total_gn} Stk.</p><p>à {n_dk:.2f}€</p></div>', unsafe_allow_html=True)
-with c_res4: st.markdown(f'<div class="result-card"><p class="metric-title">Rolliport</p><p class="metric-value">{total_rp} Stk.</p><p>à {n_rp:.2f}€</p></div>', unsafe_allow_html=True)
-
-st.markdown(f'<h2 style="text-align: center; color: #004e54;">Gesamtinvestition: {invest:,.2f} € (Netto)</h2>', unsafe_allow_html=True)
-
-st.header("Business Case (ROI & ESG)")
-c_roi1, c_roi2, c_esg1, c_esg2 = st.columns(4)
-with c_roi1: st.markdown(f'<div class="roi-card"><p class="metric-title">Einweg-Kosten / Jahr</p><p class="metric-value" style="color: #d9534f;">{einweg_jahr:,.2f} €</p></div>', unsafe_allow_html=True)
-with c_roi2: st.markdown(f'<div class="roi-card"><p class="metric-title">Amortisation nach</p><p class="metric-value">{amort_monat:.1f} Monaten</p></div>', unsafe_allow_html=True)
-with c_esg1: st.markdown(f'<div class="esg-card"><p class="metric-title">Plastik-Ersparnis</p><p class="metric-value" style="color: #5cb85c;">{plastik_jahr:,.0f} kg / Jahr</p></div>', unsafe_allow_html=True)
-with c_esg2: st.markdown(f'<div class="esg-card"><p class="metric-title">CO2-Reduktion</p><p class="metric-value" style="color: #5cb85c;">{co2_jahr:,.0f} kg / Jahr</p></div>', unsafe_allow_html=True)
-
-# PDF Button
-pdf_bytes = create_pdf(
-    verfahren, anwendung, total_p_day, standort_bericht, 
-    tp_modell, total_tp, total_gn, total_rp, n_tp, n_gn, n_dk, n_rp, 
-    invest, einweg_jahr, amort_monat, plastik_jahr, co2_jahr
-)
-st.download_button("Angebot als PDF speichern", data=pdf_bytes, file_name="Rieber_Solution.pdf", mime="application/pdf")
+# PDF
+pdf_b = create_pdf(v_sys, bereich, total_p, loc_reports, tp_m, t_tp, t_gn, t_rp, n_tp, n_gn, n_dk, n_rp, inv, roi_j, amo, pla, co2)
+st.download_button("Angebot als PDF speichern", data=pdf_b, file_name="Rieber_Angebot.pdf", mime="application/pdf")
