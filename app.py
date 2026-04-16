@@ -207,6 +207,51 @@ def create_pdf(v, a, komp, t_p, s_list, tp_m, t_tp, t_gn, t_rp, n_tp, n_gn, n_dk
 # --- APP ---
 st.set_page_config(page_title="Rieber Solutionfinder", page_icon="🍽️", layout="wide")
 inject_apple_icon()
+
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    st.markdown('''
+        <style>
+        .stApp { background-color: #f0f2f5; }
+        .login-box {
+            max-width: 380px; margin: 80px auto 0; background: white;
+            padding: 40px; border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center;
+        }
+        .login-logo { font-size: 2.8em; font-weight: 900; color: #E8471C;
+            font-style: italic; letter-spacing: -1px; }
+        .login-sub { font-size: 0.75em; letter-spacing: 0.28em; color: #aaa;
+            text-transform: uppercase; display: block; margin-top: 4px; }
+        .login-title { font-size: 1em; font-weight: 700; color: #333;
+            letter-spacing: 0.1em; text-transform: uppercase;
+            margin-top: 14px; padding-top: 14px; border-top: 1px solid #f0f0f0; }
+        .stTextInput > div > div > input { border-radius: 10px !important; }
+        .stButton > button {
+            background-color: #E8471C !important; color: white !important;
+            font-weight: 700 !important; width: 100% !important;
+            border: none !important; border-radius: 12px !important;
+            padding: 12px 24px !important; font-size: 1em !important;
+            box-shadow: 0 4px 12px rgba(232,71,28,0.3) !important;
+        }
+        </style>
+        <div class="login-box">
+            <div class="login-logo">Rieber</div>
+            <span class="login-sub">M E T A &nbsp; c o o k i n g</span>
+            <div class="login-title">Solutionfinder</div>
+        </div>
+    ''', unsafe_allow_html=True)
+    pw = st.text_input("Passwort", type="password", label_visibility="collapsed",
+                        placeholder="Passwort eingeben …")
+    if st.button("Anmelden"):
+        if pw == "Rieber":
+            st.session_state.authenticated = True
+            st.rerun()
+        else:
+            st.error("Falsches Passwort.")
+    st.stop()
+
 set_design()
 
 # --- EINGABE ---
